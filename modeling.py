@@ -103,10 +103,12 @@ def evaluate(name, model, X, y):
     print(confusion_matrix(y, y_pred))
     return {'accuracy': acc, 'roc_auc': auc}
 
-# ── Run Both Strategies ───────────────────────────────────────────────────────
+# ── Store best estimators per strategy ───────────────────────────────────────
 all_results = {}
 
-for strategy_name, dataset in [("pd.cut (equal ranges)", df_cut), ("Domain-based thresholds", df_domain)]:
+stored_models = {}
+
+for strategy_name, dataset in [("pd.cut (equal ranges)", df_cut), ("Domain-based thresholds", df_domain), ("Quantile-based", df_quantile)]:
     print(f"\n\n{'='*60}")
     print(f"STRATEGY: {strategy_name}")
     print(f"{'='*60}")
@@ -166,6 +168,50 @@ for strategy_name, dataset in [("pd.cut (equal ranges)", df_cut), ("Domain-based
         "Decision Tree":       test_dt,
         "Logistic Regression": test_lr,
     }
+
+    # Store for ROC plotting
+    stored_models[strategy_name] = {
+        "X_test": X_test,
+        "y_test": y_test,
+        "models": {
+            "Random Forest":       best_rf,
+            "Decision Tree":       best_dt,
+            "Logistic Regression": best_lr,
+        }
+    }
+
+
+# ── ROC Curves ────────────────────────────────────────────────────────────────
+classes = ['Low', 'Medium', 'High']
+colors  = ['#e41a1c', '#377eb8', '#4daf4a']
+
+for strategy_name, stored in stored_models.items():
+    X_test = stored["X_test"]
+    y_test = stored["y_test"]
+    y_test_bin = label_binarize(y_test, classes=classes)
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle(f"ROC Curves — {strategy_name}", fontsize=14, fontweight='bold')
+
+    for ax, (model_name, model) in zip(axes, stored["models"].items()):
+        y_prob = model.predict_proba(X_test)
+
+        for i, cls in enumerate(classes):
+            fpr, tpr, _ = roc_curve(y_test_bin[:, i], y_prob[:, i])
+            roc_auc = auc(fpr, tpr)
+            ax.plot(fpr, tpr, color=colors[i], lw=2, label=f"{cls} (AUC = {roc_auc:.2f})")
+
+        ax.plot([0, 1], [0, 1], 'k--', lw=1)
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel("False Positive Rate")
+        ax.set_ylabel("True Positive Rate")
+        ax.set_title(model_name)
+        ax.legend(loc="lower right", fontsize=9)
+
+    plt.tight_layout()
+    plt.savefig(f"roc_curves_{strategy_name.replace(' ', '_').replace('(', '').replace(')', '')}.png", dpi=150)
+    plt.show()
 
 # ── Final Comparison Across Both Strategies ───────────────────────────────────
 print("\n\n=== FINAL COMPARISON: Both Strategies ===")
