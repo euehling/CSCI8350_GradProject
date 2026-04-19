@@ -54,6 +54,17 @@ df_domain['Yield Per Hectare Class'] = pd.cut(
 )
 df_domain = df_domain.drop(columns=['Yield per Hectare'])
 
+# Strategy 3: Quantile-based (equal frequency)
+df_quantile = df_for_modeling.copy()
+df_quantile['Yield Per Hectare Class'] = pd.qcut(
+    df_quantile['Yield per Hectare'],
+    q=3,
+    labels=['Low', 'Medium', 'High']
+)
+df_quantile = df_quantile.drop(columns=['Yield per Hectare'])
+
+
+
 print("\n=== Strategy 1: pd.cut class distribution ===")
 print(df_cut['Yield Per Hectare Class'].value_counts().sort_index())
 print("\n=== Strategy 2: Domain-based class distribution ===")
