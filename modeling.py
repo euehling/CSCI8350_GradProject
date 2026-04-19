@@ -10,6 +10,9 @@ from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import VarianceThreshold
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_curve, auc
 
 # ── Data Loading ──────────────────────────────────────────────────────────────
 data = Path("Data/paddydataset.csv")
