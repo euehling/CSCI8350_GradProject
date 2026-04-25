@@ -7,6 +7,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
 
 # ── Data Loading ──────────────────────────────────────────────────────────────
@@ -77,7 +78,13 @@ k_means_pipeline.fit(df_for_clustering)
 
 # ── Deciding K value ───────────────────────────────────────────────────────────────
 inertia = []
-k_range = range(1, 15)
+silhouette_coefficients = []
+
+# Set range of K to try
+# NOTE: expect algorithm warnings (lloyd instead of elkan)
+#   and silhouette warnings if range includes 1 cluster
+k_range = range(2, 15)
+
 for k in k_range:
     # ── Full pipeline for k-means ──
     pipeline = Pipeline(steps=[("preprocessor", preprocessor),
@@ -88,23 +95,27 @@ for k in k_range:
                                                          max_iter=300,
                                                          tol=0.0001,
                                                          random_state=random_state,
-                                                         algorithm='lloyd')
+                                                         algorithm='elkan')
                                         )])
-    # changed from elkan to lloyd due to warning when running this code
     pipeline.fit(df_for_clustering)
     inertia.append(pipeline.named_steps["kmeans"].inertia_)
+# NOTE: I think this needs the preprocessed data (after PCA) in place of "df_for_clustering"
+#           as input to the silhouette_score function
+#    score = silhouette_score(df_for_clustering, pipeline.named_steps["kmeans"].labels_)
+#    silhouette_coefficients.append(score)
 
 # ── Plot Inertia ─────────────────────────────────────────────────────────
 plt.figure(1, figsize=(15, 6))
-plt.plot(np.arange(1, 15), inertia, 'o')
-plt.plot(np.arange(1, 15), inertia, '-', alpha=0.5)
+plt.plot(k_range, inertia, 'o')
+plt.plot(k_range, inertia, '-', alpha=0.5)
 plt.xlabel('Number of Clusters'), plt.ylabel('Inertia')
 plt.show()
 
-# ── Could implement silhouette method to identify optimal k─────────────────
-# Working first with fairly obvious elbow at k = 6
+#  ── POTENTIAL IMPROVEMENTS ─────────────────
+# Could implement silhouette method to identify optimal k
 # Example at https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis.html
 # Could also use grid to check different values for other k-means parameters
+# For now, proceeding with k = 6 due to the fairly obvious elbow
 
 # ── Final pipeline for k-means ──
 final_k = 6
@@ -119,6 +130,9 @@ final_pipeline = Pipeline(steps=[("preprocessor", preprocessor),
                                                      algorithm='lloyd')
                                     )])
 final_pipeline.fit(df_for_clustering)
+
+# Potential source of code for plotting results with PCA
+# https://www.geeksforgeeks.org/machine-learning/kmeans-clustering-and-pca-on-wine-dataset/
 
 
 
