@@ -7,15 +7,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, roc_auc_score, classification_report, confusion_matrix
-
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import label_binarize
-from sklearn.metrics import roc_curve, auc
 
 # ── Data Loading ──────────────────────────────────────────────────────────────
 data = Path("Data/paddydataset.csv")
@@ -63,7 +55,7 @@ scaler_with_PCA = Pipeline(steps=[('scaler', StandardScaler()),
 print("Scaling and PCA pipeline:", scaler_with_PCA)
 
 # ── Set up pipeline for k-means ─────────────────────────────────────────────
-k_means = Pipeline(steps=[('kmeans', KMeans(n_clusters=8,
+k_means = Pipeline(steps=[('kmeans', KMeans(n_clusters=3,
                                             init='k-means++',
                                             n_init=10,
                                             max_iter=300,
@@ -79,8 +71,57 @@ k_means_pipeline = Pipeline(steps=[("preprocessor", preprocessor),
                                    ("kmeans", k_means)
                                    ])
 
-# ── Fit k-means ───────────────────────────────────────────────────────────────────
+# ── Test fit k-means to check for errors ────────────────────────────────────────────────────────────
 k_means_pipeline.fit(df_for_clustering)
+# clusters = k_means_pipeline.predict(df_for_clustering)
 
-clusters = k_means_pipeline.predict(df_for_clustering)
+# ── Deciding K value ───────────────────────────────────────────────────────────────
+inertia = []
+k_range = range(1, 15)
+for k in k_range:
+    # ── Full pipeline for k-means ──
+    pipeline = Pipeline(steps=[("preprocessor", preprocessor),
+                                       ("scaler_PCA", scaler_with_PCA),
+                                       ("kmeans", KMeans(n_clusters=k,
+                                                         init='k-means++',
+                                                         n_init=10,
+                                                         max_iter=300,
+                                                         tol=0.0001,
+                                                         random_state=random_state,
+                                                         algorithm='lloyd')
+                                        )])
+    # changed from elkan to lloyd due to warning when running this code
+    pipeline.fit(df_for_clustering)
+    inertia.append(pipeline.named_steps["kmeans"].inertia_)
+
+# ── Plot Inertia ─────────────────────────────────────────────────────────
+plt.figure(1, figsize=(15, 6))
+plt.plot(np.arange(1, 15), inertia, 'o')
+plt.plot(np.arange(1, 15), inertia, '-', alpha=0.5)
+plt.xlabel('Number of Clusters'), plt.ylabel('Inertia')
+plt.show()
+
+# ── Could implement silhouette method to identify optimal k─────────────────
+# Working first with fairly obvious elbow at k = 6
+# Example at https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis.html
+# Could also use grid to check different values for other k-means parameters
+
+# ── Final pipeline for k-means ──
+final_k = 6
+final_pipeline = Pipeline(steps=[("preprocessor", preprocessor),
+                                   ("scaler_PCA", scaler_with_PCA),
+                                   ("kmeans", KMeans(n_clusters=final_k,
+                                                     init='k-means++',
+                                                     n_init=10,
+                                                     max_iter=300,
+                                                     tol=0.0001,
+                                                     random_state=random_state,
+                                                     algorithm='lloyd')
+                                    )])
+final_pipeline.fit(df_for_clustering)
+
+
+
+
+
 
