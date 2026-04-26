@@ -88,6 +88,11 @@ scaler_with_PCA = Pipeline(steps=[('scaler', StandardScaler()),
 
 print("Scaling and PCA pipeline:", scaler_with_PCA)
 
+# ── Create transformed dataset for later use with silhouette ────────────────
+print("Created transformed dataset after scaler and PCA, but prior to K-means.")
+X_transformed = scaler_with_PCA.fit_transform(X_preprocessed)
+print(X_transformed)
+
 # ── Set up pipeline for k-means ─────────────────────────────────────────────
 k_means = Pipeline(steps=[('kmeans', KMeans(n_clusters=3,
                                             init='k-means++',
@@ -111,7 +116,7 @@ k_means_pipeline.fit(df_for_clustering)
 
 # ── Deciding K value ───────────────────────────────────────────────────────────────
 inertia = []
-silhouette_coefficients = []
+silhouette_scores = []
 
 # Set range of K to try
 # NOTE: expect algorithm warnings (lloyd instead of elkan)
@@ -132,10 +137,9 @@ for k in k_range:
                                         )])
     pipeline.fit(df_for_clustering)
     inertia.append(pipeline.named_steps["kmeans"].inertia_)
-# NOTE: I think this needs the preprocessed data (after PCA) in place of "df_for_clustering"
-#           as input to the silhouette_score function
-#    score = silhouette_score(df_for_clustering, pipeline.named_steps["kmeans"].labels_)
-#    silhouette_coefficients.append(score)
+# NOTE: Use the preprocessed data (after PCA) as input to the silhouette_score function
+    score = silhouette_score(X_transformed, pipeline.named_steps["kmeans"].labels_)
+    silhouette_scores.append(score)
 
 # ── Plot Inertia ─────────────────────────────────────────────────────────
 plt.figure(1, figsize=(15, 6))
@@ -144,11 +148,13 @@ plt.plot(k_range, inertia, '-', alpha=0.5)
 plt.xlabel('Number of Clusters'), plt.ylabel('Inertia')
 plt.show()
 
-#  ── POTENTIAL IMPROVEMENTS ─────────────────
-# Could implement silhouette method to identify optimal k
-# Example at https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis.html
-# Could also use grid to check different values for other k-means parameters
-# For now, proceeding with k = 6 due to the fairly obvious elbow
+# ── Plot Silhouette Scores ───────────────────────────────────────────────
+# More complex example at https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis.html
+plt.figure(1, figsize=(15, 6))
+plt.plot(k_range, silhouette_scores, 'o')
+plt.plot(k_range, silhouette_scores, '-', alpha=0.5)
+plt.xlabel('Number of Clusters'), plt.ylabel('Silhouette Score')
+plt.show()
 
 # ── Final pipeline for k-means ──
 final_k = 6
