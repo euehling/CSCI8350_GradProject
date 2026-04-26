@@ -49,9 +49,42 @@ preprocessor = Pipeline(steps=[
 
 print("Preprocessing pipeline:", preprocessor)
 
+
+# ── Cumulative Explained Variance Plot ────────────────────────────────────────
+# First preprocess the data
+X_preprocessed = preprocessor.fit_transform(df_for_clustering)
+
+# Scale before PCA
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_preprocessed.toarray() if hasattr(X_preprocessed, 'toarray') else X_preprocessed)
+
+# Fit PCA with all components
+pca_full = PCA(random_state=random_state)
+pca_full.fit(X_scaled)
+
+# Plot cumulative explained variance
+cumulative_variance = np.cumsum(pca_full.explained_variance_ratio_)
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, len(cumulative_variance) + 1), cumulative_variance, marker='o', markersize=3)
+plt.axhline(y=0.90, color='r', linestyle='--', label='90% threshold')
+plt.axhline(y=0.80, color='g', linestyle='--', label='80% threshold')
+plt.xlabel('Number of Components')
+plt.ylabel('Cumulative Explained Variance')
+plt.title('PCA Cumulative Explained Variance')
+plt.legend()
+plt.show()
+
+# Print exact number of components needed
+n_components_80 = np.argmax(cumulative_variance >= 0.80) + 1
+n_components_90 = np.argmax(cumulative_variance >= 0.90) + 1
+print(f"Components needed for 80% variance: {n_components_80}")
+print(f"Components needed for 90% variance: {n_components_90}")
+
+
 # ── Set up pipeline for scaler and PCA to reduce dimensionality ───────────
 scaler_with_PCA = Pipeline(steps=[('scaler', StandardScaler()),
-                                  ('pca', PCA(n_components=23, random_state=random_state))])
+                                  ('pca', PCA(n_components=7, random_state=random_state))]) #changed to 7
 
 print("Scaling and PCA pipeline:", scaler_with_PCA)
 
