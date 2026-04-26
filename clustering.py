@@ -184,7 +184,60 @@ print("PCA explained variance:", pca_explained_variance)
 # https://www.geeksforgeeks.org/machine-learning/kmeans-clustering-and-pca-on-wine-dataset/
 
 
+#  ── Cluster Visualization Using PCA ──────────────────────────────────────────────────
+# Get cluster labels from the pipeline
+cluster_labels = final_pipeline.predict(df_for_clustering)
 
+# Use first 2 PCA components for visual
+pca_2d = Pipeline(steps=[('scaler', StandardScaler()), ('pca', PCA(n_components=2, random_state=random_state))])
 
+X_2d = pca_2d.fit_transform(X_preprocessed)
 
+plt.figure(figsize=(10, 7))
+scatter = plt.scatter(X_2d[:, 0], X_2d[:, 1], c=cluster_labels, cmap='tab10', alpha=0.6, s=30)
+plt.colorbar(scatter, label='Cluster')
+plt.xlabel('PCA Component 1')
+plt.ylabel('PCA Component 2')
+plt.title(f'K-Means Clusters (k={final_k}) Visualized with PCA')
+plt.show()
 
+# ── Cluster Interpretation ────────────────────────────────────────────────────
+"""
+Cluster visualization shows well seperated, pill shaped clusters which suggests the groupinmgs
+are being driven by categorical variables. To confirm, we look at the average numeric feature values
+and the most common categorical values within each cluster
+"""
+
+df_for_clustering['Cluster'] = cluster_labels
+
+print("\n=== Cluster Sizes ===")
+print(df_for_clustering['Cluster'].value_counts().sort_index())
+
+print("\n=== Cluster Profiles (Numeric Features) ===")
+print(df_for_clustering.groupby('Cluster')[numeric_features].mean().round(2))
+
+print("\n=== Cluster Profiles (Categorical Features) ===")
+for col in categorical_features:
+    print(f"\n-- {col} --")
+    print(df_for_clustering.groupby('Cluster')[col].agg(lambda x: x.value_counts().index[0]))
+
+# ── Cluster Descriptions ──────────────────────────────────────────────────────
+"""
+Based on the cluster profiles, each cluster maps primarily to a distinct geographic
+region (Agriblock). Numeric features including Yield per Hectare show minimal 
+variation across clusters, confirming that the clusters represent geographic 
+farming segments rather than meaningful differences in yield performance.
+This is a direct consequence of the narrow yield range in the dataset.
+"""
+cluster_descriptions = {
+    0: "Kurinjipadi region — ponmani variety, NW wind pattern",
+    1: "Sankarapuram region — delux ponni variety, SSE wind pattern",
+    2: "Panruti region — delux ponni variety, ENE wind pattern",
+    3: "Chinnasalem region — ponmani variety, E wind pattern",
+    4: "Kallakurichi region — ponmani variety, W wind pattern",
+    5: "Cuddalore region — delux ponni variety, SW wind pattern"
+}
+
+print("\n=== Cluster Descriptions ===")
+for cluster, description in cluster_descriptions.items():
+    print(f"Cluster {cluster}: {description}")
