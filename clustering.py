@@ -164,6 +164,16 @@ final_pipeline = Pipeline(steps=[("preprocessor", preprocessor),
                                     )])
 final_pipeline.fit(df_for_clustering)
 
+#  ── Review PCA values ──────────────────────────────────────────────────
+# Since scaler_PCA is a pipeline in a pipeline, we have to drill down
+#   from scaler_PCA --> pca to get values such as number of components and explained variance
+#   see "Attributes" section of https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+pca = final_pipeline.named_steps["scaler_PCA"].named_steps["pca"]
+pca_comp = pca.n_components_
+pca_explained_variance = pca.explained_variance_ratio_.sum()
+print("Number of PCA components:", pca_comp)
+print("PCA explained variance:", pca_explained_variance)
+
 # Potential source of code for plotting results with PCA
 # https://www.geeksforgeeks.org/machine-learning/kmeans-clustering-and-pca-on-wine-dataset/
 
